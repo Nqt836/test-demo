@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Đoán Hình - Phòng {{ room_id }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="container game-container">
+        <div class="game-main">
+            <div class="header">
+                <h2>Phòng: {{ room_id }} (Vòng: <span id="current-round">0</span>/<span id="max-rounds">5</span>)</h2>
+                <a href="/lobby">Rời phòng</a>
+            </div>
+
+            <div id="wait-screen">
+                <h3>Đang chờ thêm người chơi...</h3>
+                <p>Người chơi hiện tại: <span id="player-count">1</span></p>
+                <button id="start-game-btn" style="display: none;">Bắt đầu Game</button>
+            </div>
+
+            <div id="game-screen" style="display: none;">
+                <div id="image-container">
+                    <img id="game-image" src="" alt="Câu hỏi" style="display:none; max-width:100%; height:auto;"/>
+                    <video id="game-video" controls style="display:none; max-width:100%; height:auto;"></video>
+                </div>
+                <div id="question-text" style="margin-top:10px; font-weight:600;"></div>
+                <div id="answer-result"></div>
+            </div>
+
+            <div class="chat-box">
+                <div id="chat-messages">
+                    <p class="system-msg">Chào mừng {{ username }}!</p>
+                </div>
+                <form id="answer-form">
+                    <input type="text" id="answer-input" placeholder="Nhập câu trả lời của bạn..." autocomplete="off">
+                    <button type="submit">Gửi</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="game-sidebar">
+            <h3>Người chơi</h3>
+            <ul id="player-list">
+                </ul>
+        </div>
+    </div>
+
+    <script>
+        const ROOM_ID = "{{ room_id }}";
+        const MY_USERNAME = "{{ username }}";
+    </script>
+    <script src="{{ url_for('static', filename='js/game.js') }}"></script>
+</body>
+</html>

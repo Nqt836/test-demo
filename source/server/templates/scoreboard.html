@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kết quả</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container scoreboard-container">
+        <h2>Kết quả cuối cùng</h2>
+        <table id="scoreboard-table">
+            <thead>
+                <tr>
+                    <th>Hạng</th>
+                    <th>Tên người chơi</th>
+                    <th>Điểm</th>
+                </tr>
+            </thead>
+            <tbody>
+                </tbody>
+        </table>
+        
+        <div class="actions">
+            <a href="/lobby" class="btn">Về sảnh chờ</a>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/scoreboard.js') }}"></script>
+</body>
+</html>

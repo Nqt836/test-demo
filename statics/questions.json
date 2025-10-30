@@ -1,0 +1,74 @@
+{
+    "questions": [
+        {
+            "id": 1,
+            "prompt": "Đây là con gì?",
+            "answer": "Mèo",
+            "media": "cat.jpg",
+            "type": "image"
+        },
+        {
+            "id": 2,
+            "prompt": "Đây là từ gì",
+            "answer": "Thái độ",
+            "media": "doan tu 1.jpeg",
+            "type": "image"
+        },
+        {
+            "id": 3,
+            "prompt": "Đây là bài gì thời 8x - 9x",
+            "answer": "Anh nguyện chết vì em",
+            "media": "anh nguyen chet vi em.mp4",
+            "type": "video"
+        },
+        {
+            "id": 4,
+            "prompt": "Đây là từ gì",
+            "answer": "Tứ kết",
+            "media": "doan tu 2.jpeg",
+            "type": "image"
+        },
+        {
+            "id": 5,
+            "prompt": "Đây là tỉnh nào?",
+            "answer": "Sóc Trăng",
+            "media": "day la tinh nao 1.jpg",
+            "type": "image"
+        },
+        {
+            "id": 6,
+            "prompt": "Đây là bài hát gì của ca sĩ RÁCH",
+            "answer": "Về bên anh",
+            "media": "ve ben anh.mp4",
+            "type": "video"
+        },
+        {
+            "id": 7,
+            "prompt": "Tên đầy đủ của nhân vật MXH này là gì?",
+            "answer": "Ngô Bá Khá",
+            "media": "nhan vat.mp4",
+            "type": "video"
+        },
+        {
+            "id": 8,
+            "prompt": "Đây là câu thành ngữ gì?",
+            "answer": "Đàn gảy tai trâu",
+            "media": "ca dao 1.jpeg",
+            "type": "image"
+        },
+        {
+            "id": 9,
+            "prompt": "Đây nữ tiktoker triệu view nào?",
+            "answer": "Quỳnh Bei",
+            "media": "quynh bei.mp4",
+            "type": "video"
+        },
+        {
+            "id": 10,
+            "prompt": "Đây là ai?",
+            "answer": "Bruno Fernandes",
+            "media": "cau thu.mp4",
+            "type": "video"
+        }
+    ]
+}

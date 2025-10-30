@@ -1,0 +1,204 @@
+/* Thiết lập chung */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f2f5;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.container {
+    width: 100%;
+    max-width: 900px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 24px;
+    box-sizing: border-box;
+}
+
+h2, h3 {
+    color: #333;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+}
+
+input[type="text"],
+input[type="password"] {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    box-sizing: border-box;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+button, .btn {
+    background-color: #007bff;
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    text-decoration: none;
+    display: inline-block;
+}
+
+button:hover, .btn:hover {
+    background-color: #0056b3;
+}
+
+/* Tin nhắn báo lỗi/thành công */
+.message {
+    font-size: 14px;
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 4px;
+}
+.message.success { color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; }
+.message.error { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; }
+
+/* Trang Auth */
+.auth-container {
+    max-width: 400px;
+}
+.auth-container form {
+    margin-bottom: 20px;
+}
+
+/* Trang Lobby */
+.lobby-container .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+#room-list {
+    margin-top: 20px;
+}
+.room-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+.room-item button {
+    padding: 8px 12px;
+    font-size: 14px;
+}
+
+/* Trang Game */
+.game-container {
+    display: flex;
+    gap: 20px;
+}
+.game-main {
+    flex: 3;
+}
+.game-sidebar {
+    flex: 1;
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 8px;
+}
+.game-sidebar h3 {
+    margin-top: 0;
+}
+.game-sidebar ul {
+    list-style-type: none;
+    padding: 0;
+}
+.game-sidebar li {
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+#image-container {
+    width: 100%;
+    height: 400px;
+    background-color: #eee;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 15px;
+}
+#game-image {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 8px;
+}
+#image-container img,
+#image-container video {
+    /* Make media fill the container while preserving aspect ratio */
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain; /* contain = fit inside without cropping */
+    display: block;
+    border-radius: 8px;
+}
+#answer-result {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #007bff;
+    min-height: 30px;
+    text-align: center;
+}
+
+/* Chat box */
+.chat-box {
+    margin-top: 20px;
+}
+#chat-messages {
+    height: 200px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+    overflow-y: auto;
+    background-color: #fafafa;
+    margin-bottom: 10px;
+}
+#chat-messages p { margin: 5px 0; }
+.system-msg { font-style: italic; color: #555; }
+.user-msg strong { color: #0056b3; }
+
+#answer-form {
+    display: flex;
+}
+#answer-form input {
+    flex: 1;
+    margin: 0 10px 0 0;
+}
+#answer-form button {
+    white-space: nowrap;
+}
+
+/* Trang Scoreboard */
+.scoreboard-container {
+    max-width: 600px;
+    text-align: center;
+}
+#scoreboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+#scoreboard-table th, #scoreboard-table td {
+    border: 1px solid #ddd;
+    padding: 12px;
+}
+#scoreboard-table th {
+    background-color: #f4f4f4;
+}
+.actions {
+    margin-top: 20px;
+}

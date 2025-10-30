@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Admin - Upload Questions</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h2>Upload câu hỏi (ảnh/video)</h2>
+        <form id="questionForm" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="mediaType">Loại media:</label>
+                <select id="mediaType" name="mediaType" required>
+                    <option value="image">Ảnh</option>
+                    <option value="video">Video</option>
+                    <option value="text">Chỉ text</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="mediaFile">File media:</label>
+                <!-- accept both image and video MIME types -->
+                <input type="file" id="mediaFile" name="mediaFile" accept="image/*,video/*">
+                <div id="previewContainer"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="prompt">Câu hỏi:</label>
+                <input type="text" id="prompt" name="prompt" required>
+            </div>
+
+            <div class="form-group">
+                <label for="answer">Đáp án:</label>
+                <input type="text" id="answer" name="answer" required>
+            </div>
+
+            <button type="submit">Upload</button>
+        </form>
+
+        <div id="messageContainer"></div>
+
+        <h3>Danh sách câu hỏi hiện có</h3>
+        <table id="questionsList">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Câu hỏi</th>
+                    <th>Đáp án</th>
+                    <th>Loại</th>
+                    <th>Media</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for q in questions %}
+                <tr>
+                    <td>{{ q.id }}</td>
+                    <td>{{ q.prompt }}</td>
+                    <td>{{ q.answer }}</td>
+                    <td>{{ q.type }}</td>
+                    <td>{{ q.media if q.media else 'Không có' }}</td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="5">Không có câu hỏi.</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/admin_questions.js') }}"></script>
+</body>
+</html>

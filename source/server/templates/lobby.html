@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sảnh chờ</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="container lobby-container">
+        <div class="header">
+            <h2>Chào, {{ username }}!</h2>
+            <a href="/logout">Đăng xuất</a>
+        </div>
+
+        <h3>Tạo phòng mới</h3>
+        <form id="create-room-form">
+            <input type="text" id="room-id" placeholder="Tên phòng" required>
+            <button type="submit">Tạo phòng</button>
+        </form>
+        <p id="lobby-msg" class="message"></p>
+
+        <hr>
+
+        <h3>Tham gia phòng</h3>
+        <div id="room-list">
+            <p>Đang tải danh sách phòng...</p>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/lobby.js') }}"></script>
+</body>
+</html>
