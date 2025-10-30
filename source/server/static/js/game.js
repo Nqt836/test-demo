@@ -15,6 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatMessagesEl = document.getElementById('chat-messages');
     const answerForm = document.getElementById('answer-form');
     const answerInput = document.getElementById('answer-input');
+    const chatForm = document.getElementById('chat-form');
+    const chatInput = document.getElementById('chat-input');
     
     let mySid = null; // Biến lưu SID của chính mình
 
@@ -70,6 +72,22 @@ document.addEventListener('DOMContentLoaded', () => {
         updatePlayerList(data.players);
     });
 
+    // 1b. Xử lý gửi tin nhắn ở phòng chờ
+    chatForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const message = chatInput.value.trim();
+        if (message) {
+            socket.emit('send_chat_message', { room_id: ROOM_ID, message: message });
+            chatInput.value = '';
+            chatInput.focus();
+        }
+    });
+
+    // 1c. Lắng nghe tin nhắn từ người chơi khác
+    socket.on('receive_chat_message', (data) => {
+        addChatMessage(data.sender, data.message, 'user');
+    });
+
     // 2. Xử lý khi chủ phòng bấm "Bắt đầu Game"
     startGameBtn.addEventListener('click', () => {
         socket.emit('start_game', { room_id: ROOM_ID });
@@ -82,6 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
         waitScreen.style.display = 'none';
         gameScreen.style.display = 'block';
         answerForm.style.display = 'flex';
+        chatForm.style.display = 'none'; // Ẩn chat form khi game bắt đầu
 
         // Cập nhật thông tin vòng chơi
         currentRoundEl.textContent = data.round;
@@ -174,6 +193,21 @@ document.addEventListener('DOMContentLoaded', () => {
         updatePlayerList(data.scores);
         // Vô hiệu hóa input nếu trả lời đúng đầu tiên
         answerInput.disabled = true; 
+    });
+
+    // 6b. Lắng nghe sự kiện hiển thị đáp án
+    socket.on('show_answer', (data) => {
+        // Hiển thị đáp án trên màn hình (có thể hiển thị ở answer-result element)
+        answerResultEl.innerHTML = `
+            <div style="background-color: #d4edda; padding: 15px; border-radius: 5px; text-align: center;">
+                <p style="margin: 0; font-weight: bold; color: #155724;">🎉 ${data.first_correct_player} là người đầu tiên trả lời đúng!</p>
+                <p style="margin: 10px 0 0 0; font-size: 18px; color: #155724;"><strong>Đáp án:</strong> ${data.correct_answer}</p>
+                <p style="margin: 5px 0 0 0; font-size: 14px; color: #666;">Câu hỏi: ${data.question_text}</p>
+            </div>
+        `;
+        updatePlayerList(data.scores);
+        // Vô hiệu hóa input sau khi có đáp án
+        answerInput.disabled = true;
     });
 
     // 7. Lắng nghe khi game kết thúc

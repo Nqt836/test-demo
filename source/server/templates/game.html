@@ -34,8 +34,14 @@
                 <div id="chat-messages">
                     <p class="system-msg">Chào mừng {{ username }}!</p>
                 </div>
-                <form id="answer-form">
+                <!-- Form trả lời (ẩn ở phòng chờ, hiển thị khi chơi game) -->
+                <form id="answer-form" style="display: none;">
                     <input type="text" id="answer-input" placeholder="Nhập câu trả lời của bạn..." autocomplete="off">
+                    <button type="submit">Gửi</button>
+                </form>
+                <!-- Form chat (hiển thị ở phòng chờ, ẩn khi chơi game) -->
+                <form id="chat-form">
+                    <input type="text" id="chat-input" placeholder="Nhập tin nhắn..." autocomplete="off">
                     <button type="submit">Gửi</button>
                 </form>
             </div>
