@@ -207,10 +207,11 @@ def handle_disconnect():
     username = session.get('username', 'Guest')
     print(f"Client disconnected: {username} (SID: {request.sid})")
     
-    # Xóa người chơi khỏi phòng và thông báo cho những người khác
+    # Kiểm tra xem người chơi có trong phòng không
     room_id, updated_players, player_name = game_logic.remove_player_from_room(request.sid)
     
-    if room_id:
+    if room_id and updated_players:
+        # Chỉ gửi thông báo player_left nếu phòng vẫn còn người chơi khác
         emit('player_left', {
             'message': f'{player_name} đã rời phòng.',
             'players': updated_players
@@ -272,12 +273,7 @@ def on_join_room(data):
             join_room(room_id)
             print(f"User {username} reconnected to room {room_id} (old SID {existing_sid} -> new SID {request.sid})")
             emit('joined_room', {'room_id': room_id})
-            emit('player_joined', {
-                'message': f'{username} đã (re)kết nối.',
-                'players': room.get_player_list(),
-                'host_id': room.host_id,
-                'my_id': request.sid
-            }, to=room_id)
+            # Không gửi player_joined thông báo cho reconnect
             emit('room_list_updated', game_logic.get_room_list(), broadcast=True)
             return
 
@@ -307,6 +303,33 @@ def on_join_room(data):
         emit('room_list_updated', game_logic.get_room_list(), broadcast=True)
     else:
         emit('error', {'message': 'Phòng không tồn tại.'})
+
+@socketio.on('send_chat_message')
+def on_send_chat_message(data):
+    """Xử lý tin nhắn chat ở phòng chờ"""
+    room_id = data.get('room_id')
+    message = data.get('message', '').strip()
+    
+    if not room_id or not message:
+        return
+    
+    room = game_logic.get_room(room_id)
+    if not room:
+        emit('error', {'message': 'Phòng không tồn tại.'})
+        return
+    
+    # Lấy tên người gửi từ danh sách người chơi
+    sender_name = 'Unknown'
+    for player in room.players.values():
+        if player['sid'] == request.sid:
+            sender_name = player['name']
+            break
+    
+    # Phát tin nhắn đến tất cả người chơi trong phòng
+    emit('receive_chat_message', {
+        'sender': sender_name,
+        'message': message
+    }, to=room_id)
 
 @socketio.on('start_game')
 def on_start_game(data):
@@ -365,8 +388,11 @@ def on_submit_answer(data):
 
     # Gửi thông báo kết quả dựa trên logic
     if result['status'] == 'correct_first':
-        emit('answer_result', {
-            'message': f"🎉 {result['player_name']} là người đầu tiên trả lời đúng!",
+        # Phát đáp án cho tất cả người chơi
+        emit('show_answer', {
+            'correct_answer': room.current_question.get('answer', ''),
+            'question_text': room.current_question.get('prompt', ''),
+            'first_correct_player': result['player_name'],
             'scores': result['scores']
         }, to=room_id)
         

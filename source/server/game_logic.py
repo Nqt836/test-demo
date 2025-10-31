@@ -2,31 +2,42 @@ import random
 import time
 import os
 import json
+import csv
 
-# Giải pháp lưu trữ câu hỏi: load từ file JSON ở top-level `statics/questions.json`.
-# Mỗi mục có: {"image": "filename.jpg", "answer": "...", "prompt": "..."}
+# Giải pháp lưu trữ câu hỏi: load từ file CSV ở top-level `statics/questions_output.csv`.
+# Mỗi mục có: {"id": 1, "prompt": "...", "answer": "...", "media": "filename.jpg", "type": "image"}
 
-# Đường dẫn tới file questions.json (project_root/statics/questions.json)
+# Đường dẫn tới file questions_output.csv (project_root/statics/questions_output.csv)
 _THIS_DIR = os.path.abspath(os.path.dirname(__file__))
-_QUESTIONS_JSON = os.path.abspath(os.path.join(_THIS_DIR, '..', '..', 'statics', 'questions.json'))
+_QUESTIONS_CSV = os.path.abspath(os.path.join(_THIS_DIR, '..', '..', 'statics', 'questions_output.csv'))
 
 QUESTIONS = []
 
 def load_questions_from_file():
     global QUESTIONS
     try:
-        if os.path.exists(_QUESTIONS_JSON):
-            with open(_QUESTIONS_JSON, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                QUESTIONS = data.get('questions', [])
+        if os.path.exists(_QUESTIONS_CSV):
+            # Mở file với encoding utf-8-sig để loại bỏ BOM nếu có
+            with open(_QUESTIONS_CSV, 'r', encoding='utf-8-sig') as f:
+                reader = csv.DictReader(f)
+                QUESTIONS = []
+                for row in reader:
+                    # Strip whitespace từ keys và values
+                    cleaned_row = {k.strip(): v.strip() if isinstance(v, str) else v for k, v in row.items()}
+                    # Chuyển đổi id sang số nguyên
+                    cleaned_row['id'] = int(cleaned_row['id'])
+                    QUESTIONS.append(cleaned_row)
         else:
             QUESTIONS = []
-    except Exception:
+    except Exception as e:
+        print(f"Error loading questions: {e}")
+        import traceback
+        traceback.print_exc()
         QUESTIONS = []
 
 
 def add_question_to_file(media_filename, answer, prompt, media_type='image'):
-    """Thêm một câu hỏi mới vào file questions.json (append).
+    """Thêm một câu hỏi mới vào file questions_output.csv (append).
 
     media_filename: tên file đã lưu vào statics/{images,videos}, hoặc None cho text-only
     answer: văn bản đáp án
@@ -34,37 +45,39 @@ def add_question_to_file(media_filename, answer, prompt, media_type='image'):
     media_type: loại media ('image', 'video', hoặc 'text')
     """
     try:
-        # Đọc nội dung hiện tại
-        current_data = {'questions': []}
-        if os.path.exists(_QUESTIONS_JSON):
-            with open(_QUESTIONS_JSON, 'r', encoding='utf-8') as f:
-                current_data = json.load(f)
-
-        # Tạo ID mới
+        global QUESTIONS
+        
+        # Tìm ID mới (max ID + 1)
         max_id = 0
-        for question in current_data['questions']:
-            if question['id'] > max_id:
-                max_id = question['id']
+        if QUESTIONS:
+            max_id = max(int(q['id']) for q in QUESTIONS if 'id' in q)
         new_id = max_id + 1
 
-        # Thêm câu hỏi mới
+        # Tạo dòng mới
         new_question = {
             "id": new_id,
             "prompt": prompt,
             "answer": answer,
-            "media": media_filename,
+            "media": media_filename if media_filename else "",
             "type": media_type
         }
         
-        current_data['questions'].append(new_question)
-
-        # Ghi lại vào file
-        os.makedirs(os.path.dirname(_QUESTIONS_JSON), exist_ok=True)
-        with open(_QUESTIONS_JSON, 'w', encoding='utf-8') as f:
-            json.dump(current_data, f, ensure_ascii=False, indent=2)
+        # Ghi thêm vào file CSV (append mode)
+        os.makedirs(os.path.dirname(_QUESTIONS_CSV), exist_ok=True)
+        file_exists = os.path.exists(_QUESTIONS_CSV) and os.path.getsize(_QUESTIONS_CSV) > 0
+        
+        with open(_QUESTIONS_CSV, 'a', newline='', encoding='utf-8') as f:
+            fieldnames = ['id', 'prompt', 'answer', 'media', 'type']
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            
+            # Nếu file mới tạo, viết header
+            if not file_exists:
+                writer.writeheader()
+            
+            writer.writerow(new_question)
 
         # Cập nhật QUESTIONS trong bộ nhớ
-        QUESTIONS = current_data['questions']
+        QUESTIONS.append(new_question)
         return True
     except Exception as e:
         print(f"Error adding question: {e}")
