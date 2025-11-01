@@ -5,6 +5,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const createRoomForm = document.getElementById('create-room-form');
     const roomIdInput = document.getElementById('room-id');
     const msgEl = document.getElementById('lobby-msg');
+    const chatForm = document.getElementById('chat-form');
+    const chatInput = document.getElementById('chat-input');
+    const chatMessages = document.getElementById('lobby-chat-messages');
 
     // 1. Yêu cầu danh sách phòng khi vừa vào sảnh
     socket.emit('request_room_list');

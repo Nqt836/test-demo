@@ -83,117 +83,59 @@ def add_question_to_file(media_filename, answer, prompt, media_type='image'):
 # Load questions khi import module
 load_questions_from_file()
 
-from source.server.models import Room, Player, User
-from source.server.extensions import db
+# Biến toàn cục để lưu trạng thái của tất cả các phòng
+# Key: room_id, Value: thông tin phòng
+game_rooms = {}
 
 class GameRoom:
     """Đại diện cho một phòng chơi"""
     def __init__(self, room_id, host_id=None, host_name=None):
-        # Kiểm tra xem phòng đã tồn tại trong DB chưa
-        room = Room.query.filter_by(room_id=room_id).first()
-        
-        if room is None and host_id is not None:
-            # Tạo phòng mới trong database
-            user = User.query.get(host_id)
-            if user:
-                room = Room(
-                    room_id=room_id,
-                    host_id=host_id,
-                    game_started=False,
-                    current_round=0,
-                    max_rounds=10
-                )
-                db.session.add(room)
-                
-                # Thêm chủ phòng vào danh sách người chơi
-                player = Player(
-                    room=room,
-                    user_id=host_id,
-                    score=0,
-                    socket_id=host_id  # Socket.IO session ID
-                )
-                db.session.add(player)
-                db.session.commit()
-        
         self.room_id = room_id
-        self.db_room = room
+        self.host_id = host_id
+        self.host_name = host_name  # Lưu host_name ngay cả khi host_id là None (cho HTTP create)
+        # Nếu host_id truyền None -> tạo phòng rỗng (chỉ metadata), người chơi sẽ được thêm khi họ join
+        if host_id is not None:
+            self.players = {host_id: {"name": host_name, "score": 0}}
+        else:
+            self.players = {}
+        self.game_started = False
+        self.last_activity = time.time()  # Track thời gian cuối cùng có người trong phòng
+        self.current_round = 0
+        self.max_rounds = 10
         self.current_question = None
-        self.answered_this_round = set()  # Lưu SID của người đã trả lời đúng
+        self.answered_this_round = set() # Lưu SID của người đã trả lời đúng
         self.answer_history = []  # Lưu các câu trả lời (đúng/sai) trong phòng
-        self.remaining_question_indices = []  # Pool câu hỏi
+        # Pool các chỉ số câu hỏi chưa được dùng trong phòng này. Khi rỗng, sẽ refill (shuffle) lại.
+        self.remaining_question_indices = []
 
     def add_player(self, player_id, player_name):
         """Thêm người chơi mới vào phòng"""
-        if not self.db_room:
-            return False
-            
-        # Kiểm tra xem người chơi đã có trong phòng chưa
-        existing_player = Player.query.filter_by(
-            room_id=self.db_room.id,
-            socket_id=player_id
-        ).first()
-        
-        if existing_player:
-            return False
-            
-        # Tìm user từ username
-        user = User.query.filter_by(username=player_name).first()
-        if not user:
-            return False
-            
-        # Thêm người chơi mới
-        new_player = Player(
-            room=self.db_room,
-            user_id=user.id,
-            socket_id=player_id,
-            score=0
-        )
-        db.session.add(new_player)
-        
-        # Nếu phòng trống, set làm host
-        if len(self.db_room.players) == 0:
-            self.db_room.host_id = user.id
-            
-        db.session.commit()
-        return True
+        # Nếu phòng hiện đang trống, gán lại host cho người tham gia trước tiên
+        if len(self.players) == 0:
+            self.host_id = player_id
+
+        if player_id not in self.players:
+            self.players[player_id] = {"name": player_name, "score": 0}
+            return True
+        return False
 
     def remove_player(self, player_id):
         """Xóa người chơi khi họ ngắt kết nối"""
-        if not self.db_room:
-            return
-            
-        player = Player.query.filter_by(
-            room_id=self.db_room.id,
-            socket_id=player_id
-        ).first()
-        
-        if player:
-            db.session.delete(player)
-            db.session.commit()
+        if player_id in self.players:
+            del self.players[player_id]
 
     def get_player_list(self):
         """Lấy danh sách người chơi và điểm số"""
-        if not self.db_room:
-            return []
-            
-        return [{
-            "name": player.user.username,
-            "score": player.score
-        } for player in self.db_room.players]
+        return [p for p in self.players.values()]
     
     def start_game(self):
         """Bắt đầu game, reset điểm và bắt đầu vòng 1"""
-        if not self.db_room or self.db_room.game_started:
-            return None
-            
-        print(f"Starting game in room {self.room_id} with {len(self.db_room.players)} players")
-        
-        self.db_room.game_started = True
-        self.db_room.current_round = 0
-        
-        # Reset điểm số của tất cả người chơi
-        for player in self.db_room.players:
-            player.score = 0
+        print(f"Starting game in room {self.room_id} with {len(self.players)} players")
+        if not self.game_started:
+            self.game_started = True
+            self.current_round = 0
+            for player in self.players.values():
+                player["score"] = 0
             # Chuẩn bị pool câu hỏi cho phòng này
             self._reset_question_pool()
             next_round_data = self.next_round()
@@ -336,70 +278,157 @@ class GameRoom:
 # --- Các hàm quản lý phòng ---
 
 def get_room_list():
-    """Lấy danh sách các phòng đang chờ"""
+    """Lấy danh sách các phòng đang chờ (chưa started) hoặc phòng đang chơi nhưng còn người chơi"""
+    global game_rooms
     rooms = []
-    db_rooms = Room.query.filter_by(game_started=False).all()
+    current_time = time.time()
+    rooms_to_delete = []
     
-    for r in db_rooms:
-        count = len(r.players)
-        host = User.query.get(r.host_id)
-        host_name = host.username if host else '---'
+    for room_id, r in game_rooms.items():
+        # Xóa phòng trống quá 300 giây (5 phút)
+        if len(r.players) == 0 and (current_time - r.last_activity) > 300:
+            rooms_to_delete.append(room_id)
+            delete_room_from_db(room_id)
+            continue
         
-        rooms.append({
-            "id": r.room_id,
-            "host": host_name,
-            "count": count
-        })
+        # Hiển thị:
+        # 1. Phòng chưa started (chờ người tham gia)
+        # 2. Phòng đã started nhưng còn có người chơi (để rejoin)
+        # Bỏ qua: phòng đã started và trống
+        if r.game_started and len(r.players) == 0:
+            continue
+            
+        count = len(r.players)
+        # Lấy host_name từ room object (được set khi tạo room)
+        # Nếu không có, fallback tới players dict hoặc '---'
+        host_name = r.host_name  # Lưu từ khi tạo room
+        if not host_name:
+            if hasattr(r, 'host_id') and r.host_id in r.players:
+                host_name = r.players[r.host_id]['name']
+            else:
+                host_name = '---'
+
+        rooms.append({"id": r.room_id, "host": host_name, "count": count})
     
+    # Xóa phòng trống quá lâu
+    for room_id in rooms_to_delete:
+        del game_rooms[room_id]
+
     return rooms
 
 def create_new_room(room_id, host_id, host_name):
     """Tạo một phòng mới"""
-    # Kiểm tra xem phòng đã tồn tại chưa
-    existing_room = Room.query.filter_by(room_id=room_id).first()
-    if existing_room:
+    # host_id/host_name có thể là None nếu tạo phòng qua HTTP (chưa có socket SID)
+    if room_id in game_rooms:
         return None
-        
     room = GameRoom(room_id, host_id, host_name)
+    game_rooms[room_id] = room
+    # Lưu vào database
+    save_room_to_db(room_id)
     return room
 
 def get_room(room_id):
     """Lấy thông tin phòng bằng ID"""
-    room = Room.query.filter_by(room_id=room_id).first()
-    if room:
-        return GameRoom(room_id)
-    return None
+    return game_rooms.get(room_id)
 
 def remove_player_from_room(player_id):
     """Tìm và xóa người chơi khỏi bất kỳ phòng nào họ đang ở"""
-    player = Player.query.filter_by(socket_id=player_id).first()
-    if not player:
-        return (None, None, None)
+    room_to_remove_from = None
+    player_name = ""
+    
+    for room in game_rooms.values():
+        if player_id in room.players:
+            player_name = room.players[player_id]["name"]
+            room.remove_player(player_id)
+            room_to_remove_from = room
+            break
+
+    if room_to_remove_from:
+        # Nếu phòng trống, xóa ngay
+        if len(room_to_remove_from.players) == 0:
+            room_id = room_to_remove_from.room_id
+            # Xóa từ database
+            delete_room_from_db(room_id)
+            # Xóa từ memory
+            del game_rooms[room_id]
+            print(f"[ROOM_CLEANUP] Phòng '{room_id}' đã xóa vì không còn người chơi")
+            # Trả về danh sách players rỗng
+            return (room_id, [], player_name)
         
-    room = player.room
-    player_name = player.user.username
+        # Nếu chủ phòng rời đi, chỉ định chủ phòng mới
+        if player_id == room_to_remove_from.host_id:
+            new_host_id = next(iter(room_to_remove_from.players))
+            room_to_remove_from.host_id = new_host_id
+            new_host_name = room_to_remove_from.players[new_host_id]['name']
+            room_to_remove_from.host_name = new_host_name  # Cập nhật host_name
+            print(f"[HOST_CHANGE] Chủ phòng '{room_to_remove_from.room_id}' đổi thành: {new_host_name}")
+        
+        # Update database với player list mới và host mới
+        save_room_to_db(room_to_remove_from.room_id)
+            
+        return (room_to_remove_from.room_id, room_to_remove_from.get_player_list(), player_name)
     
-    # Xóa người chơi khỏi phòng
-    db.session.delete(player)
+    return (None, None, None)
+
+def save_room_to_db(room_id):
+    """Lưu thông tin phòng vào database"""
+    from source.server.models import GameRoom as GameRoomModel
+    from source.server.extensions import db
+    from datetime import datetime
     
-    # Nếu phòng trống
-    if len(room.players) <= 1:  # 1 vì player hiện tại chưa bị xóa khỏi DB
-        # Giữ lại phòng nhưng trả về danh sách rỗng
-        db.session.commit()
-        return (room.room_id, [], player_name)
+    room = game_rooms.get(room_id)
+    if not room:
+        return
     
-    # Nếu là chủ phòng rời đi, chỉ định chủ phòng mới
-    if player.user_id == room.host_id:
-        new_host = room.players[0] if room.players else None
-        if new_host:
-            room.host_id = new_host.user_id
-            db.session.commit()
-    
-    # Lấy danh sách người chơi còn lại
-    player_list = [{
-        "name": p.user.username,
-        "score": p.score
-    } for p in room.players if p.id != player.id]
+    # Kiểm tra xem phòng đã có trong DB chưa
+    db_room = GameRoomModel.query.filter_by(room_id=room_id).first()
+    if db_room:
+        # Update
+        db_room.player_count = len(room.players)
+        db_room.game_started = room.game_started
+        db_room.last_activity = datetime.utcnow()
+    else:
+        # Insert - lấy host_name từ room.host_name (được set khi create) hoặc từ players
+        host_name = room.host_name
+        if not host_name and room.host_id in room.players:
+            host_name = room.players[room.host_id].get('name', 'Unknown')
+        if not host_name:
+            host_name = 'Unknown'
+            
+        db_room = GameRoomModel(
+            room_id=room_id,
+            host_name=host_name,
+            player_count=len(room.players),
+            game_started=room.game_started
+        )
+        db.session.add(db_room)
     
     db.session.commit()
-    return (room.room_id, player_list, player_name)
+
+def delete_room_from_db(room_id):
+    """Xóa phòng khỏi database"""
+    from source.server.models import GameRoom as GameRoomModel
+    from source.server.extensions import db
+    
+    db_room = GameRoomModel.query.filter_by(room_id=room_id).first()
+    if db_room:
+        db.session.delete(db_room)
+        db.session.commit()
+
+def load_rooms_from_db():
+    """Tải phòng từ database vào memory (khi server start)"""
+    from source.server.models import GameRoom as GameRoomModel
+    from datetime import datetime, timedelta
+    
+    db_rooms = GameRoomModel.query.all()
+    for db_room in db_rooms:
+        # Xóa phòng nếu trống > 5 phút
+        time_elapsed = (datetime.utcnow() - db_room.last_activity).total_seconds()
+        if db_room.player_count == 0 and time_elapsed > 300:
+            delete_room_from_db(db_room.room_id)
+            continue
+        
+        # Tải phòng vào memory (chỉ nếu chưa start game)
+        if not db_room.game_started and db_room.room_id not in game_rooms:
+            room = GameRoom(db_room.room_id, host_id=None, host_name=db_room.host_name)
+            game_rooms[db_room.room_id] = room

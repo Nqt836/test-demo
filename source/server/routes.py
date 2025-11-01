@@ -81,14 +81,25 @@ def create_room_http():
         return jsonify({'success': False, 'message': 'room_id không hợp lệ.'}), 400
 
     username = session['username']
-    room = game_logic.create_new_room(room_id, None, None)
+    # Tạo phòng mới (chưa có host_id vì chưa connect socket, nhưng lưu host_name)
+    room = game_logic.create_new_room(room_id, None, username)
     if room is None:
         return jsonify({'success': False, 'message': 'Phòng đã tồn tại.'}), 409
 
+    print(f"[CREATE_ROOM_HTTP] Phòng '{room_id}' được tạo bởi {username}")
+    
+    # Broadcast danh sách phòng cập nhật tới TẤT CẢ client trong lobby
     try:
-        socketio.emit('room_list_updated', game_logic.get_room_list(), broadcast=True)
-    except Exception:
-        pass
+        from flask import current_app
+        # Dùng app context để emit
+        with current_app.app_context():
+            room_list = game_logic.get_room_list()
+            print(f"[CREATE_ROOM_HTTP] Broadcasting room_list_updated với {len(room_list)} phòng")
+            # Emit tới tất cả socket clients (không có to parameter = broadcast)
+            socketio.emit('room_list_updated', room_list)
+            print(f"[CREATE_ROOM_HTTP] Broadcast thành công!")
+    except Exception as e:
+        print(f"[CREATE_ROOM_HTTP] Lỗi broadcast: {type(e).__name__}: {str(e)}")
 
     return jsonify({'success': True, 'room_id': room_id})
 

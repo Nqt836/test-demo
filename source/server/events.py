@@ -19,21 +19,49 @@ def handle_connect():
 def handle_disconnect():
     """Khi người dùng ngắt kết nối"""
     username = session.get('username', 'Guest')
-    print(f"{username} đã ngắt kết nối (SID: {request.sid})")
+    player_sid = request.sid
+    print(f"{username} đã ngắt kết nối (SID: {player_sid})")
     
-    room_id, updated_players, player_name = game_logic.remove_player_from_room(request.sid)
+    # Lưu thông tin phòng TRƯỚC khi remove player
+    room_id_before = None
+    was_host = False
+    for room in game_logic.game_rooms.values():
+        if player_sid in room.players:
+            room_id_before = room.room_id
+            was_host = (player_sid == room.host_id)
+            break
+    
+    room_id, updated_players, player_name = game_logic.remove_player_from_room(player_sid)
     
     if room_id:
         emit('player_left', {
             'message': f'{player_name} đã rời phòng.',
             'players': updated_players
         }, to=room_id)
-        emit('room_list_updated', game_logic.get_room_list(), skip_sid=request.sid)
+        
+        # Nếu phòng còn tồn tại (không bị xóa), check xem host có đổi hay không
+        room = game_logic.get_room(room_id)
+        if room and len(room.players) > 0 and was_host:
+            # Host đã thay đổi, broadcast thông báo
+            socketio.emit('host_changed', {
+                'new_host_id': room.host_id,
+                'new_host_name': room.host_name,
+                'message': f'{room.host_name} là chủ phòng mới'
+            }, to=room_id)
+            print(f"[DISCONNECT] Host thay đổi trong phòng {room_id}, host mới: {room.host_name}")
+        
+        # Broadcast cập nhật danh sách phòng tới tất cả
+        socketio.emit('room_list_updated', game_logic.get_room_list())
+        print(f"[DISCONNECT] Đã broadcast room_list_updated sau khi {player_name} disconnect từ {room_id}")
 
 @socketio.on('request_room_list')
 def on_request_room_list():
     """Khi người dùng ở sảnh chờ yêu cầu danh sách phòng"""
-    emit('room_list_updated', game_logic.get_room_list())
+    rooms = game_logic.get_room_list()
+    print(f"[REQUEST_ROOM_LIST] {session.get('username', 'Guest')} yêu cầu danh sách phòng. Có {len(rooms)} phòng")
+    for room in rooms:
+        print(f"  - Phòng: {room['id']}, Chủ: {room['host']}, Người: {room['count']}")
+    emit('room_list_updated', rooms)
 
 
 def _find_player_sid_by_name(room, username):
@@ -85,7 +113,10 @@ def on_join_room(data):
                 'host_id': room.host_id,
                 'my_id': request.sid
             }, to=room_id)
-            emit('room_list_updated', game_logic.get_room_list(), skip_sid=request.sid)
+            # Broadcast cập nhật danh sách phòng
+            socketio.emit('room_list_updated', game_logic.get_room_list())
+            # Lưu vào database
+            game_logic.save_room_to_db(room_id)
             return
 
         # Không cho join nếu game đã bắt đầu (chỉ cho reconnect)
@@ -107,7 +138,10 @@ def on_join_room(data):
             'my_id': request.sid
         }, to=room_id)
 
-        emit('room_list_updated', game_logic.get_room_list(), skip_sid=request.sid)
+        # Broadcast cập nhật danh sách phòng tới tất cả
+        socketio.emit('room_list_updated', game_logic.get_room_list())
+        # Lưu vào database
+        game_logic.save_room_to_db(room_id)
     else:
         emit('error', {'message': 'Phòng không tồn tại.'})
 
@@ -118,16 +152,6 @@ def on_chat_message(data):
     message = data['message']
     username = session.get('username', 'Guest')
     emit('chat_message', {'sender': username, 'message': message}, to=room_id)
-
-@socketio.on('lobby_chat')
-def on_lobby_chat(data):
-    """Xử lý chat trong sảnh chờ - broadcast cho tất cả người chơi ở sảnh"""
-    message = data['message']
-    username = session.get('username', 'Guest')
-    # Broadcast tới tất cả (skip sender để không nhận lại)
-    emit('lobby_chat', {'sender': username, 'message': message}, skip_sid=request.sid)
-    # Gửi lại cho sender để xác nhận
-    emit('lobby_chat', {'sender': username, 'message': message})
 
 @socketio.on('start_game')
 def on_start_game(data):
@@ -202,3 +226,63 @@ def on_submit_answer(data):
     elif result['status'] == 'incorrect':
         # Không hiển thị câu trả lời sai ở chat
         pass
+
+@socketio.on('leave_room')
+def on_leave_room(data):
+    """Khi người dùng muốn rời phòng (quay lại lobby)"""
+    room_id = data.get('room_id')
+    username = session.get('username', 'Guest')
+    
+    room = game_logic.get_room(room_id)
+    if not room:
+        emit('error', {'message': 'Phòng không tồn tại.'})
+        return
+    
+    # Xóa người chơi khỏi phòng
+    if request.sid in room.players:
+        player_name = room.players[request.sid]['name']
+        del room.players[request.sid]
+        
+        # Nếu là host mà còn người khác, chuyển host
+        if request.sid == room.host_id and room.players:
+            new_host_id = next(iter(room.players.keys()))
+            room.host_id = new_host_id
+            new_host_name = room.players[new_host_id]['name']
+            room.host_name = new_host_name  # Cập nhật host_name
+            
+            print(f"[LEAVE_ROOM] Host '{player_name}' rời khỏi phòng '{room_id}', host mới: '{new_host_name}'")
+            
+            # Thông báo cho những người còn lại về host mới
+            emit('host_changed', {
+                'new_host_id': new_host_id,
+                'new_host_name': new_host_name,
+                'message': f'{new_host_name} là chủ phòng mới'
+            }, to=room_id)
+        else:
+            print(f"[LEAVE_ROOM] '{player_name}' rời khỏi phòng '{room_id}'")
+        
+        # Update database
+        game_logic.save_room_to_db(room_id)
+        
+        # Broadcast cập nhật danh sách phòng tới tất cả (bao gồm người vừa rời)
+        socketio.emit('room_list_updated', game_logic.get_room_list())
+        print(f"[LEAVE_ROOM] Đã broadcast room_list_updated")
+    else:
+        emit('error', {'message': 'Bạn không có trong phòng.'})
+        
+        # Update DB
+        game_logic.save_room_to_db(room_id)
+    
+    # Rời phòng SocketIO
+    leave_room(room_id)
+    
+    # Thông báo cho những người còn lại trong phòng
+    emit('player_left', {
+        'message': f'{username} đã rời phòng.',
+        'players': room.get_player_list() if room.players else [],
+        'host_id': room.host_id if room.players else None
+    }, to=room_id)
+    
+    # Broadcast danh sách phòng cập nhật tới tất cả user
+    socketio.emit('room_list_updated', game_logic.get_room_list())
+    print(f"[LEAVE_ROOM] Đã broadcast room_list_updated")

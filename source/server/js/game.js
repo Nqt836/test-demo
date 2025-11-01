@@ -20,6 +20,20 @@ document.addEventListener('DOMContentLoaded', () => {
     
     let mySid = null; // Biến lưu SID của chính mình
 
+    // --- Xử lý nút "Rời phòng" ---
+    const leaveRoomLink = document.querySelector('.header a[href="/lobby"]');
+    if (leaveRoomLink) {
+        leaveRoomLink.addEventListener('click', (e) => {
+            e.preventDefault(); // Ngăn chặn hành động mặc định
+            // Thông báo server rằng chúng ta rời phòng
+            socket.emit('leave_room', { room_id: ROOM_ID });
+            // Chuyển trang sau 1 giây
+            setTimeout(() => {
+                window.location.href = '/lobby';
+            }, 1000);
+        });
+    }
+
     // --- Hàm trợ giúp ---
     
     // Hàm cập nhật danh sách người chơi
@@ -53,9 +67,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 1. Lắng nghe khi có người chơi tham gia/rời đi
     socket.on('player_joined', (data) => {
-        const chatBox = document.getElementById('chat-box');
-        chatBox.style.display = 'block'; // Hiển thị chat box khi đã vào phòng thành công
-
         addChatMessage('Hệ thống', data.message, 'system-msg');
         updatePlayerList(data.players);
         
@@ -73,6 +84,19 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('player_left', (data) => {
         addChatMessage('Hệ thống', data.message, 'system-msg');
         updatePlayerList(data.players);
+    });
+
+    // Lắng nghe khi chủ phòng bị thay đổi
+    socket.on('host_changed', (data) => {
+        addChatMessage('Hệ thống', data.message, 'system-msg');
+        // Cập nhật nút bắt đầu game nếu cần
+        const isNewHost = (data.new_host_id === mySid);
+        if (isNewHost) {
+            startGameBtn.style.display = 'block';
+            addChatMessage('Hệ thống', 'Bạn là chủ phòng mới!', 'system-msg');
+        } else {
+            startGameBtn.style.display = 'none';
+        }
     });
 
     // 2. Xử lý khi chủ phòng bấm "Bắt đầu Game"
@@ -160,14 +184,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 4b. Form chat phòng (chỉ dùng được khi game đã bắt đầu)
+    // 4b. Form chat phòng (luôn dùng được)
     chatForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        // Kiểm tra xem game đã bắt đầu chưa bằng cách kiểm tra màn hình game có hiển thị không
-        if (gameScreen.style.display === 'none') {
-            alert('Chức năng chat chỉ được phép sử dụng khi game đã bắt đầu!');
-            return;
-        }
         const message = chatInput.value.trim();
         if (message) {
             socket.emit('send_chat_message', { room_id: ROOM_ID, message: message });

@@ -1,5 +1,5 @@
 # MODULE SERVER
-
+<!-- venv\Scripts\Activate.ps1 -->
 > 📘 *Sinh viên mô tả phần **server** tại đây. Điền đầy đủ theo framework và bài toán của nhóm.*
 
 ---

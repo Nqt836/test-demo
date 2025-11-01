@@ -59,5 +59,10 @@ def create_app():
         # Import models tại đây để đảm bảo db được khởi tạo
         from . import models 
         db.create_all()
+        
+        # KHÔNG tải phòng cũ từ database - chỉ tạo phòng mới khi người chơi tạo
+        # Phòng sẽ được lưu vào DB và có thể rejoin khi đang chơi
+        # from . import game_logic
+        # game_logic.load_rooms_from_db()
 
     return app

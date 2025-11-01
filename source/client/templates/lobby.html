@@ -28,6 +28,18 @@
             <p>Đang tải danh sách phòng...</p>
         </div>
 
+        <hr>
+
+        <div class="chat-box" style="display: none;">
+            <h3>Chat phòng chờ</h3>
+            <div id="lobby-chat-messages" class="chat-messages">
+                <p class="system-msg">Chào mừng {{ username }}!</p>
+            </div>
+            <form id="chat-form">
+                <input type="text" id="chat-input" placeholder="Trò chuyện..." autocomplete="off">
+                <button type="submit">Gửi</button>
+            </form>
+        </div>
     </div>
 
     <script src="{{ url_for('static', filename='js/lobby.js') }}"></script>
