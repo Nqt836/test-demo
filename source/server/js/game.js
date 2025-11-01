@@ -53,6 +53,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 1. Lắng nghe khi có người chơi tham gia/rời đi
     socket.on('player_joined', (data) => {
+        const chatBox = document.getElementById('chat-box');
+        chatBox.style.display = 'block'; // Hiển thị chat box khi đã vào phòng thành công
+
         addChatMessage('Hệ thống', data.message, 'system-msg');
         updatePlayerList(data.players);
         
@@ -72,22 +75,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updatePlayerList(data.players);
     });
 
-    // 1b. Xử lý gửi tin nhắn ở phòng chờ
-    chatForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const message = chatInput.value.trim();
-        if (message) {
-            socket.emit('send_chat_message', { room_id: ROOM_ID, message: message });
-            chatInput.value = '';
-            chatInput.focus();
-        }
-    });
-
-    // 1c. Lắng nghe tin nhắn từ người chơi khác
-    socket.on('receive_chat_message', (data) => {
-        addChatMessage(data.sender, data.message, 'user');
-    });
-
     // 2. Xử lý khi chủ phòng bấm "Bắt đầu Game"
     startGameBtn.addEventListener('click', () => {
         socket.emit('start_game', { room_id: ROOM_ID });
@@ -96,11 +83,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // 3. Lắng nghe khi có vòng chơi mới
     socket.on('new_round', (data) => {
         console.log('New round received:', data);  // Debug log
+        console.log('Media URL:', data.media_url, 'Type:', data.media_type);  // Debug
         // Ẩn màn hình chờ và hiện màn hình game
         waitScreen.style.display = 'none';
         gameScreen.style.display = 'block';
         answerForm.style.display = 'flex';
-        chatForm.style.display = 'none'; // Ẩn chat form khi game bắt đầu
 
         // Cập nhật thông tin vòng chơi
         currentRoundEl.textContent = data.round;
@@ -122,9 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
         gameVideoEl.removeAttribute('src');
 
         if (mediaType === 'video') {
-            // URL-encode filename to avoid issues with spaces or special characters
-            const encoded = encodeURI(mediaUrl);
-            gameVideoEl.src = encoded;
+            gameVideoEl.src = mediaUrl;
             gameVideoEl.style.display = 'block';
             // Ensure video fits and can autoplay: mute + playsinline
             try {
@@ -165,20 +150,28 @@ document.addEventListener('DOMContentLoaded', () => {
         addChatMessage('Hệ thống', `--- Vòng ${data.round} bắt đầu! ---`, 'system-msg');
     });
 
-    // 4. Gửi câu trả lời
+    // 4. Form trả lời câu hỏi (chỉ khi game đang chạy)
     answerForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const answer = answerInput.value.trim();
         if (answer) {
-            // Phân biệt chat thường và trả lời
-            if (answer.startsWith('/chat ')) {
-                const chatMsg = answer.substring(6);
-                socket.emit('send_chat_message', { room_id: ROOM_ID, message: chatMsg });
-            } else {
-                // Đây là câu trả lời
-                socket.emit('submit_answer', { room_id: ROOM_ID, answer: answer });
-            }
+            socket.emit('submit_answer', { room_id: ROOM_ID, answer: answer });
             answerInput.value = '';
+        }
+    });
+
+    // 4b. Form chat phòng (chỉ dùng được khi game đã bắt đầu)
+    chatForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        // Kiểm tra xem game đã bắt đầu chưa bằng cách kiểm tra màn hình game có hiển thị không
+        if (gameScreen.style.display === 'none') {
+            alert('Chức năng chat chỉ được phép sử dụng khi game đã bắt đầu!');
+            return;
+        }
+        const message = chatInput.value.trim();
+        if (message) {
+            socket.emit('send_chat_message', { room_id: ROOM_ID, message: message });
+            chatInput.value = '';
         }
     });
 
@@ -193,21 +186,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updatePlayerList(data.scores);
         // Vô hiệu hóa input nếu trả lời đúng đầu tiên
         answerInput.disabled = true; 
-    });
-
-    // 6b. Lắng nghe sự kiện hiển thị đáp án
-    socket.on('show_answer', (data) => {
-        // Hiển thị đáp án trên màn hình (có thể hiển thị ở answer-result element)
-        answerResultEl.innerHTML = `
-            <div style="background-color: #d4edda; padding: 15px; border-radius: 5px; text-align: center;">
-                <p style="margin: 0; font-weight: bold; color: #155724;">🎉 ${data.first_correct_player} là người đầu tiên trả lời đúng!</p>
-                <p style="margin: 10px 0 0 0; font-size: 18px; color: #155724;"><strong>Đáp án:</strong> ${data.correct_answer}</p>
-                <p style="margin: 5px 0 0 0; font-size: 14px; color: #666;">Câu hỏi: ${data.question_text}</p>
-            </div>
-        `;
-        updatePlayerList(data.scores);
-        // Vô hiệu hóa input sau khi có đáp án
-        answerInput.disabled = true;
     });
 
     // 7. Lắng nghe khi game kết thúc

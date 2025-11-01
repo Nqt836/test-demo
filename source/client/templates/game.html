@@ -28,20 +28,25 @@
                 </div>
                 <div id="question-text" style="margin-top:10px; font-weight:600;"></div>
                 <div id="answer-result"></div>
+                
+                <!-- Form trả lời câu hỏi -->
+                <div style="margin-top: 20px; padding: 15px; background-color: #f0f0f0; border-radius: 5px;">
+                    <label style="font-weight: bold;">Câu trả lời:</label>
+                    <form id="answer-form">
+                        <input type="text" id="answer-input" placeholder="Nhập câu trả lời..." autocomplete="off" style="width: 100%; padding: 8px; margin: 5px 0;">
+                        <button type="submit" style="background-color: #28a745;">Trả lời</button>
+                    </form>
+                </div>
             </div>
 
-            <div class="chat-box">
+            <!-- Chat phòng chung -->
+            <div class="chat-box" id="chat-box" style="display: none;">
+                <h3>Chat Phòng</h3>
                 <div id="chat-messages">
                     <p class="system-msg">Chào mừng {{ username }}!</p>
                 </div>
-                <!-- Form trả lời (ẩn ở phòng chờ, hiển thị khi chơi game) -->
-                <form id="answer-form" style="display: none;">
-                    <input type="text" id="answer-input" placeholder="Nhập câu trả lời của bạn..." autocomplete="off">
-                    <button type="submit">Gửi</button>
-                </form>
-                <!-- Form chat (hiển thị ở phòng chờ, ẩn khi chơi game) -->
                 <form id="chat-form">
-                    <input type="text" id="chat-input" placeholder="Nhập tin nhắn..." autocomplete="off">
+                    <input type="text" id="chat-input" placeholder="Nhập tin nhắn chat..." autocomplete="off">
                     <button type="submit">Gửi</button>
                 </form>
             </div>

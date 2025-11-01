@@ -38,6 +38,14 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
     msgEl.textContent = data.message;
     if (data.success) {
         msgEl.className = 'message success';
+        // Clear form
+        document.getElementById('register-username').value = '';
+        document.getElementById('register-password').value = '';
+        // Redirect to login after 1 second
+        setTimeout(() => {
+            alert('Đăng ký thành công! Vui lòng đăng nhập.');
+            location.reload();
+        }, 1000);
     } else {
         msgEl.className = 'message error';
     }

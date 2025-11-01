@@ -158,7 +158,8 @@ button:hover, .btn:hover {
 .chat-box {
     margin-top: 20px;
 }
-#chat-messages {
+#chat-messages,
+#lobby-chat-messages {
     height: 200px;
     border: 1px solid #ddd;
     border-radius: 4px;
@@ -179,6 +180,18 @@ button:hover, .btn:hover {
     margin: 0 10px 0 0;
 }
 #answer-form button {
+    white-space: nowrap;
+}
+
+#chat-form {
+    display: flex;
+    margin-top: 10px;
+}
+#chat-form input {
+    flex: 1;
+    margin: 0 10px 0 0;
+}
+#chat-form button {
     white-space: nowrap;
 }
 

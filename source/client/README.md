@@ -1,9 +1,74 @@
-# Mô-đun client
+# MODULE CLIENT
 
-Thư mục `source/client/` chứa mã phía client của bài tập (HTML/JS/CSS hoặc module client theo yêu cầu).
+> 📘 *Sinh viên mô tả phần **client** tại đây. Điền đầy đủ theo framework và bài toán của nhóm.*
 
-Nội dung:
-- Giữ các file mã nguồn client ở đây.
-- Không lưu file môi trường hoặc thư mục ảo (venv) trong thư mục này.
+---
 
-Nếu bạn cần tách client thành project riêng, có thể tạo package, node/npm config hoặc README chi tiết hơn.
+## 🎯 MỤC TIÊU
+
+Client chịu trách nhiệm:
+- Gửi yêu cầu đến server
+- Hiển thị kết quả cho người dùng
+- Cung cấp giao diện tương tác
+
+---
+
+## ⚙️ CÔNG NGHỆ SỬ DỤNG
+
+| Thành phần | Công nghệ |
+|------------|-----------|
+| Ngôn ngữ | Node.js / Python / Java / ... |
+| Thư viện chính | Axios / Requests / ... |
+| Giao thức | HTTP / WebSocket / ... |
+
+---
+
+## 🚀 HƯỚNG DẪN CHẠY
+
+### Cài đặt
+```bash
+# Ví dụ với Node.js
+npm install
+
+# Hoặc với Python
+pip install -r requirements.txt
+```
+
+### Chạy chương trình
+```bash
+# Ví dụ
+node main.js
+# hoặc
+python client.py
+```
+
+### Cấu hình (nếu cần)
+- Server URL: `http://localhost:8080`
+- Có thể thay đổi trong file `config.js` hoặc `.env`
+
+---
+
+## 📦 CẤU TRÚC
+```
+client/
+├── README.md
+├── main.js (hoặc client.py)
+├── config.js
+└── lib/
+    └── helper.js
+```
+
+---
+
+## 💡 SỬ DỤNG
+```bash
+# Ví dụ gửi request
+node main.js --input "data"
+```
+
+---
+
+## 📝 GHI CHÚ
+
+- Đảm bảo server đã chạy trước khi khởi động client
+- Mặc định kết nối đến `localhost:8080`

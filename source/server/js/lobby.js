@@ -79,4 +79,5 @@ document.addEventListener('DOMContentLoaded', () => {
         msgEl.textContent = 'Mất kết nối tới máy chủ.';
         msgEl.className = 'message error';
     });
+
 });
